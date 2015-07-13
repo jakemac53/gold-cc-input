@@ -142,15 +142,36 @@ style this element.
       },
     },
 
-    observers: [
-      '_computeValue(value)'
-    ],
+    listeners: {
+      'input': '_onInput'
+    },
 
-    _computeValue: function(value) {
+    ready: function() {
+      this.addEventListener('blur', function() {
+        this._handleAutoValidate();
+      }, true);
+
+      // If there's an initial input, validate it.
+      if (this.value)
+        this._handleAutoValidate();
+    },
+
+    /**
+     * If `autoValidate` is true, then validates the element.
+     */
+    _handleAutoValidate: function() {
+      if (this.autoValidate)
+        this.validate();
+    },
+
+    /**
+     * A handler that is called on input
+     */
+    _onInput: function() {
       var start = this.$.input.selectionStart;
-      var previousCharASpace = this.value.charAt(start - 1) == ' ';
+      var previousCharASpace = this.value ? this.value.charAt(start - 1) == ' ' : false;
 
-      value = value.replace(/\s+/g, '');
+      var value = this.value.replace(/\s+/g, '');
       var formattedValue = '';
       for (var i = 0; i < value.length; i++) {
         // Add a space after every 4 characters.
@@ -161,17 +182,20 @@ style this element.
       }
       this.updateValueAndPreserveCaret(formattedValue.trim());
 
-      if (this.autoValidate)
-        this.validate();
-
       // If the character right before the selection is a newly inserted
       // space, we need to advance the selection to maintain the caret position.
       if (!previousCharASpace && this.value.charAt(start - 1) == ' ') {
         this.$.input.selectionStart = start+1;
         this.$.input.selectionEnd = start+1;
       }
+
+      this._handleAutoValidate();
     },
 
+    /**
+     * Returns true if the element has a valid value, and sets the visual error
+     * state.
+     */
     validate: function() {
       // Empty, non-required input is valid.
       if (!this.required && this.value == '') {
